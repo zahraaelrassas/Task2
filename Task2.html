@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة وتحليل نتائج الطلاب</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background-color: #f0f2f5; color: #333; padding: 20px; direction: rtl; text-align: right; }
+        .container { max-width: 1250px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        header h1 { font-size: 22px; color: #1a252f; font-weight: 700; }
+        header p { font-size: 13px; color: #7f8c8d; margin-top: 3px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; }
+        .card h3 { font-size: 13px; color: #7f8c8d; margin-bottom: 8px; }
+        .card .number { font-size: 26px; font-weight: 700; color: #2c3e50; }
+        .card .icon { position: absolute; left: 20px; top: 20px; font-size: 24px; color: #95a5a6; }
+
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .chart-box { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .chart-box h3 { font-size: 15px; color: #2c3e50; margin-bottom: 15px; }
+
+        .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        
+        table { width: 100%; background: #fff; border-radius: 12px; border-collapse: collapse; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 25px; }
+        th, td { padding: 12px 15px; text-align: center; font-size: 13px; }
+        th { background-color: #f8f9fa; color: #2c3e50; font-weight: 700; }
+        tr:not(:last-child) td { border-bottom: 1px solid #f1f2f6; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #e8f8f5; color: #27ae60; }
+        .badge-danger { background: #ffd2d2; color: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <header>
+            <div>
+                <h1>لوحه تحليل الطلاب</h1>
+                <p>نظرة عامة على الأداء الأكاديمي والدرجات ونتائج لجنة الرأفة</p>
+            </div>
+            <div>
+                <span class="badge badge-success"><i class="bi bi-calendar3"></i> الفصل الدراسي الحالي</span>
+            </div>
+        </header>
+        <!-- 2. Top Stats Grid -->
+        <div class="stats-grid">
+            <div class="card">
+                <i class="bi bi-people icon"></i>
+                <h3>إجمالي الطلاب</h3>
+                <div class="number" id="totalStudents">0</div>
+            </div>
+            <div class="card">
+                <i class="bi bi-graph-up icon"></i>
+                <h3>متوسط العام الدراسي</h3>
+                <div class="number" id="avgScore">0%</div>
+            </div>
+            <div class="card">
+<i class="bi bi-trophy icon"></i>
+                <h3>الطلاب الناجحون</h3>
+                <div class="number" id="passedCount">0</div>
+            </div>
+            <div class="card">
+                <i class="bi bi-person-check icon"></i>
+                <h3>معدل النجاح</h3>
+                <div class="number" id="successRate">0%</div>
+            </div>
+        </div>
+        
+        <div class="charts-row">
+            <div class="chart-box">
+                <h3>توزيع الطلاب حسب التقدير</h3>
+                <div style="width: 70%; margin: 0 auto; height: 220px; position: relative;">
+                    <canvas id="gradeChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-box">
+                <h3>مقارنة درجات المواد</h3>
+                <div style="height: 220px;">
+                    <canvas id="subjectChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bottom-grid">
+            <div class="chart-box">
+                <h3>ملخص الأداء</h3>
+                <table style="box-shadow: none; margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>الطالب</th>
+                            <th>المتوسط</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody"></tbody>
+                </table>
+            </div>
+            <div class="chart-box">
+                <h3>لجنة الرأفة</h3>
+                <div style="text-align: center; padding: 20px 0;">
+                    <h2 style="font-size: 38px; color: #2980b9;" id="graceCount">0</h2>
+                    <p style="color: #7f8c8d; font-size: 13px; margin-top: 5px;">عدد الطلاب المستفيدين من ترفيع 48 و 49 إلى 50</p>
+                    <div style="margin-top: 15px; background: #eef7fc; padding: 10px; border-radius: 8px; color: #2980b9; font-size: 12px;">
+                        متوسطهم بعد الرأفة: <strong id="graceAvg">49.67</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: #2c3e50;">تفاصيل نتائج الطلاب</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>رقم الجلوس</th>
+                    <th>اسم الطالب</th>
+                    <th>المتوسط</th>
+                    <th>أعلى درجة</th>
+                    <th>أقل درجة</th>
+                    <th>التقدير</th>
+                    <th>الحالة الأكاديمية</th>
+                </tr>
+            </thead>
+            <tbody id="studentsTableBody"></tbody>
+        </table>
+    </div>
+    <script>
+       
+        class Student {
+            constructor(name, id, grades) {
+                this.name = name;
+                this.id = id;
+                this.grades = grades;
+            }
+            applyGraceMarks() {
+                this.grades = this.grades.map(grade => (grade === 48 || grade === 49) ? 50 : grade);
+                return this.grades;
+            }
+            analyzeGrades() {
+                const total = this.grades.reduce((sum, grade) => sum + grade, 0);
+                const avg = total / this.grades.length;
+                const max = this.grades.reduce((m, g) => Math.max(m, g), this.grades[0]);
+                const min = this.grades.reduce((m, g) => Math.min(m, g), this.grades[0]);
+                
+                let gradeLetter = 'A';
+                if (avg < 50) gradeLetter = 'F';
+                else if (avg < 65) gradeLetter = 'C';
+                else if (avg < 80) gradeLetter = 'B';
+                return {
+                    total: total,
+                    average: avg.toFixed(2),
+                    max: max,
+                    min: min,
+                    letter: gradeLetter
+                };
+            }
+        }
+        
+const universitySystem = [];
+        const s1 = new Student("أحمد", 101, [48, 85, 90]);
+        const s2 = new Student("مازن", 102, [40, 45, 30]);
+        const s3 = new Student("رهف", 103, [95, 92, 88]);
+        const s4 = new Student("مريم", 104, [49, 75, 80]);
+        const rawStudents = [s1, s2, s3, s4];
+        let graceCountVal = 0;
+        rawStudents.forEach(student => {
+            const hadGrace = student.grades.some(g => g === 48 || g === 49);
+            if (hadGrace) graceCountVal++;
+            student.applyGraceMarks();
+            universitySystem.push(student);
+        });
+        
+        const passedStudents = universitySystem.filter(student => {
+            return student.grades.every(grade => grade >= 50);
+        });
+        const allAverages = universitySystem.map(s => parseFloat(s.analyzeGrades().average));
+        const generalAvg = (allAverages.reduce((a, b) => a + b, 0) / universitySystem.length).toFixed(1);
+        document.getElementById('totalStudents').innerText = universitySystem.length;
+        document.getElementById('avgScore').innerText = generalAvg + '%';
+        document.getElementById('passedCount').innerText = passedStudents.length;
+        document.getElementById('successRate').innerText = ((passedStudents.length / universitySystem.length) * 100).toFixed(0) + '%';
+        document.getElementById('graceCount').innerText = graceCountVal;
+       
+        const tableBody = document.getElementById('studentsTableBody');
+        const summaryBody = document.getElementById('summaryTableBody');
+        universitySystem.forEach(student => {
+            const stats = student.analyzeGrades();
+            const isPassed = student.grades.every(g => g >= 50);
+            
+           
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${student.id}</td>
+                <td><strong>${student.name}</strong></td>
+                <td>${stats.average}%</td>
+                <td>${stats.max}</td>
+                <td>${stats.min}</td>
+                <td><strong>${stats.letter}</strong></td>
+                <td>
+                    <span class="badge ${isPassed ? 'badge-success' : 'badge-danger'}">
+                        ${isPassed ? 'ناجح دراسياً' : 'راسب بمواد'}
+                    </span>
+                </td>
+            `;
+            tableBody.appendChild(row);
+            
+            const summaryRow = document.createElement('tr');
+            summaryRow.innerHTML = `
+                <td>${student.name}</td>
+                <td>${stats.average}%</td>
+                <td><span class="badge ${isPassed ? 'badge-success' : 'badge-danger'}">${isPassed ? 'ناجح' : 'راسب'}</span></td>
+            `;
+            summaryBody.appendChild(summaryRow);
+        });
+        
+        const ctx1 = document.getElementById('gradeChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['التقدير A', 'التقدير B', 'التقدير C', 'التقدير F'],
+                datasets: [{
+                    data: [1, 1, 1, 1],
+                    backgroundColor: ['#2ecc71', '#f1c40f', '#e67e22', '#9b59b6']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+        
+        const ctx2 = document.getElementById('subjectChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: ['المادة الأولى', 'المادة الثانية', 'المادة الثالثة'],
+                datasets: [
+                    { label: 'أحمد', data: [50, 85, 90], backgroundColor: '#1b4965' },
+                    { label: 'مازن', data: [40, 45, 30], backgroundColor: '#62b6cb' },
+                    { label: 'رهف', data: [95, 92, 88], backgroundColor: '#fe5f55' }
+                ]
+            },
+options: { responsive: true, maintainAspectRatio: false }
+        });
+    </script>
+</body>
+</html>
